@@ -1,0 +1,46 @@
+/employer pays employee
+
+contract salary{
+
+    //VARIABLES
+    struct employee{
+        string employeeName;
+        bool paid;
+    }
+
+    address public employerAddress;
+    string public employerName;
+    uint public employeeSalary;
+
+    mapping(address => employee) public employeeDetails;
+
+    //MODIFIERS
+    modifier condition(bool _condition){
+        require(_condition);
+        _;
+    }
+
+    modifier employerOnly(){
+        require(msg.sender == employerAddress);
+        _;
+    }
+
+    //FUNCTIONS
+    constructor(
+        string memory _employerName
+    )
+    {
+        employerAddress = msg.sender;
+        employerName = _employerName;
+        
+    }
+
+    function addEmployee(address _employeeAddress, string memory _employeeName) public employerOnly {
+        employee memory e;
+        e.employeeName = _employeeName;
+        e.paid = false;
+        employeeDetails[_employeeAddress] = e;
+    }
+
+
+}
