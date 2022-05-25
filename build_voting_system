@@ -1,6 +1,4 @@
-//SPDX-License-Identifier: UNLICENSED
-
-pragma solidity >= 0.7.0 <0.9.0;
+pragma solidity >=0.7.0 < 0.9.0;
 
 contract Ballot{
 
@@ -13,34 +11,39 @@ contract Ballot{
     struct voter {
         string voterName;
         bool voted;
-    }
 
+    }
+    //count votes make sure it's private
     uint private countResult = 0;
     uint public finalResult = 0;
-    uint public totalVoter = 0;
-    uint public totalVote = 0;
+    uint public totalVoters = 0;
+    uint public totalVotes = 0;
 
     address public ballotOfficialAddress;
     string public ballotOfficialName;
     string public proposal;
 
+    //mapping is like dictionary the address is link to voters when queried returns voterName and voted
     mapping(uint => vote) private votes;
-    mapping(address => voter) public voterRegister;
+    mapping(address => voter) public voterRegistry;
 
-    enum State { Created, Voting, Ended}
+    enum State { Created, Voting, Ended }
     State public state;
 
-    //MODIFIERS
+    //MODIFIERS checking conditions before executing functions
+
     modifier condition(bool _condition){
         require(_condition);
         _;
     }
 
+    //whoever is calling the function needs to be the ballotOfficial
     modifier onlyOfficial(){
         require(msg.sender == ballotOfficialAddress);
         _;
     }
 
+    //state of the contract to equal the function _state
     modifier inState(State _state){
         require(state == _state);
         _;
@@ -49,6 +52,7 @@ contract Ballot{
     //EVENTS
 
     //FUNCTIONS
+    //only one is allowed helps initialise the contract state, needs to enter the 2 values before it begins
     constructor(
         string memory _ballotOfficialName,
         string memory _proposal
@@ -65,38 +69,42 @@ contract Ballot{
     function addVoter(address _voterAddress, string memory _voterName) public inState(State.Created) onlyOfficial {
         voter memory v;
         v.voterName = _voterName;
-        v.voted = false;
-        voterRegister[_voterAddress] = v;
-        totalVoter++;
+        v.voted = false; //have not voted
+        voterRegistry[_voterAddress] = v;
+        totalVoters++;
     }
 
     function startVote() public inState(State.Created) onlyOfficial {
+        //changing the state of votes therefore cannot add more voters
         state = State.Voting;
     }
 
     function doVote(bool _choice) public inState(State.Voting) returns (bool voted) {
+
         bool found = false;
 
-        if (bytes(voterRegister[msg.sender].voterName).length != 0
-        && !voterRegister[msg.sender].voted){
-            voterRegister[msg.sender].voted = true;
+        if(bytes(voterRegistry[msg.sender].voterName).length != 0
+        && !voterRegistry[msg.sender].voted) {
+            voterRegistry[msg.sender].voted = true;
             vote memory v;
             v.voterAddress = msg.sender;
             v.choice = _choice;
-            if(_choice) {
+            if(_choice){
                 countResult++;
             }
-            votes[totalVote] = v;
-            totalVote++;
+            votes[totalVotes] = v;
+            totalVotes++;
+            //mapping to voters address and their choice
             found = true;
-        }
+        }   
         return found;
+        
     }
 
-    function endVote() public inState(State.Voting) onlyOfficial{
+    function endVote() public inState(State.Voting) onlyOfficial {
+        //state needs to be voting before triggers to ended
         state = State.Ended;
         finalResult = countResult;
 
     }
-
 }
