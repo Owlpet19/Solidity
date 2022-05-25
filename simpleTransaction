@@ -26,3 +26,40 @@ contract SendMoneyExample{
 
 
 }
+
+//==========================================================================
+//SPDX-License-Identifier: UNLICENSED
+
+pragma solidity >=0.6.0 < 0.9.0;
+
+contract Coin{
+
+    address public minter;
+    
+    //dictionary key and value
+    //mapping balance to address
+    mapping(address => uint) public balances;
+
+    //log onto the blockchain
+    event Sent(address from , address to, uint amount);
+
+    //runs directly when a contract starts
+    constructor(){
+        minter = msg.sender;
+    }
+
+    function mint(address receiver, uint amount) public payable {
+        //checks conditions before executing function
+        require(msg.sender == minter);
+        require(msg.value < 1e60);
+        balances[receiver] += amount;
+    }
+
+    function send(address receiver, uint amount) public {
+        require(amount <= balances[msg.sender], "Insufficient balance");
+        //find balance of initiator 
+        balances[msg.sender] -= amount;
+        balances[receiver] += amount;
+        emit Sent(msg.sender, receiver, amount);
+    }
+}
