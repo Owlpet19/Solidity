@@ -1,0 +1,114 @@
+// SPDX-License-Identifier: MIT
+
+pragma solidity ^0.8.0;
+
+
+contract BikeChain{
+
+    address owner;
+
+    constructor() {
+        owner = msg.sender;
+    }
+
+
+    //Add yourself as a renter
+    struct Renter {
+        address payable walletAddress;
+        string firstName;
+        string lastName;
+        bool canRent;
+        bool active;
+        uint balance;
+        uint due;
+        uint start;
+        uint end;
+    }
+
+    mapping (address => Renter) public renters;
+
+    function addRenter( address payable walletAddress, string memory firstName, string memory lastName, bool canRent, bool active, uint balance, uint due, uint start, uint end) public {
+            //To map start with mapping (renters) and the function value must equal key in this case walletAddress is address = address 
+            renters[walletAddress] = Renter(walletAddress, firstName, lastName, canRent, active, balance, due, start, end);
+        }
+
+    //Check out bike
+
+    function checkout(address walletAddress) public {
+        //ensure there is no outstanding balance
+        require(renters[walletAddress].due == 0, "You have a pending balance");
+        //ensure they're able to rent
+        require(renters[walletAddress].canRent == true, "You cannot rent at this time");
+        //process function
+        renters[walletAddress].active = true;
+        renters[walletAddress].start = block.timestamp;
+        renters[walletAddress].canRent = false;
+    }
+
+    //Check in bike
+    function checkin(address walletAddress) public {
+        //ensure they have checked out a bike
+        require(renters[walletAddress].active == true, "Please check out a bike first");
+        renters[walletAddress].active = false;
+        renters[walletAddress].end = block.timestamp;
+        setDue(walletAddress);
+        //due amount
+    }
+
+    //Get total duration of bike use
+    //create a function to calculate time difference in seconds
+    function renterTimespan(uint start, uint end) internal pure returns(uint){
+        return end - start;
+    }
+
+    function getTotalDuration(address walletAddress) public view returns(uint){
+        require(renters[walletAddress].active == false, "Bike is currently checked out");
+        uint timeSpan = renterTimespan(renters[walletAddress].start, renters[walletAddress].end);
+        uint timeSpanInMinutes = timeSpan /60;
+        return timeSpanInMinutes;
+    }
+    
+    //Get Contract balance
+
+    function balanceOf() public view returns(uint){
+        //return contract balance
+        return address(this).balance;
+    }
+
+    //Get Renters balance
+
+    function balanceofRenter(address walletAddress) public view returns(uint){
+        return renters[walletAddress].balance;
+    }
+
+    //Set due amount
+
+    function setDue(address walletAddress) internal {
+        uint timeSpanInMinutes = getTotalDuration(walletAddress);
+        uint fiveMinuteIncrements = timeSpanInMinutes / 5;
+        renters[walletAddress].due = fiveMinuteIncrements * 1200000000000000;
+    }
+
+    function canRentBike(address walletAddress) public view returns(bool){
+        return renters[walletAddress].canRent;
+    }
+
+    
+    //Renter prepaid
+    function deposit(address walletAddress) payable public {
+        renters[walletAddress].balance += msg.value;
+    }
+
+    //Make payment
+    function payment(address walletAddress) payable public{
+        require(renters[walletAddress].due > 0, "You do not have anything due at this time");
+        require(renters[walletAddress].balance >= msg.value, "You do not have enough funds to cover payments. Please make a deposit.");
+        renters[walletAddress].balance -= msg.value;
+        renters[walletAddress].canRent = true;
+        renters[walletAddress].due = 0;
+        renters[walletAddress].start = 0;
+        renters[walletAddress].end = 0;
+    }
+
+
+}
